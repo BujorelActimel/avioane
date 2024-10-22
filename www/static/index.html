@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airplane Battle</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <!-- Fixed paths by removing extra 'static/' -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="status" class="status-message">Connecting to server...</div>
+    
+    <div id="game-container">
+        <div class="grid-container" id="my-grid-container">
+            <h2>Your Fleet</h2>
+            <div class="coordinates">
+                <div class="coordinate-labels">
+                    <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div>
+                    <div>F</div><div>G</div><div>H</div><div>I</div><div>J</div>
+                </div>
+                <div class="coordinate-numbers">
+                    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+                    <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+                </div>
+                <div id="my-grid" class="grid"></div>
+            </div>
+        </div>
+        
+        <div class="grid-container" id="opponent-grid-container">
+            <h2>Enemy Territory</h2>
+            <div class="coordinates">
+                <div class="coordinate-labels">
+                    <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div>
+                    <div>F</div><div>G</div><div>H</div><div>I</div><div>J</div>
+                </div>
+                <div class="coordinate-numbers">
+                    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+                    <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+                </div>
+                <div id="opponent-grid" class="grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="rotate-up" data-tooltip="Rotate Up">↑</button>
+        <button id="rotate-right" data-tooltip="Rotate Right">→</button>
+        <button id="rotate-down" data-tooltip="Rotate Down">↓</button>
+        <button id="rotate-left" data-tooltip="Rotate Left">←</button>
+    </div>
+
+    <div id="score" class="score-panel"></div>
+
+    <div id="game-instructions" class="instructions">
+        <h3>How to Play</h3>
+        <p>1. Place your airplanes using the rotation controls</p>
+        <p>2. Click on the enemy grid to attack</p>
+        <p>3. Right-click to place flags for strategy</p>
+        <p>4. Hit airplane heads to win!</p>
+    </div>
+
+    <div class="victory-overlay" id="victoryOverlay">
+        <div class="victory-content">
+            <h1 class="victory-title" id="victoryTitle">Victory!</h1>
+            <p class="victory-message" id="victoryMessage">You've defeated your opponent!</p>
+            
+            <div class="victory-stats">
+                <h3>Battle Statistics</h3>
+                <div class="stat-item">Total Shots: <span id="totalShots">0</span></div>
+                <div class="stat-item">Hit Ratio: <span id="hitRatio">0%</span></div>
+                <div class="stat-item">Time Played: <span id="timePlayed">0:00</span></div>
+            </div>
+            
+            <div class="victory-buttons">
+                <button class="victory-button play-again" onclick="restartGame()">Play Again</button>
+                <button class="victory-button exit-game" onclick="exitGame()">Exit Game</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
