@@ -14,53 +14,65 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class GameState:
     def __init__(self):
-        self.games: Dict[str, Dict[str, WebSocket]] = {}
-        self.grids: Dict[str, Dict[str, List[List]]] = {}
-        self.shots: Dict[str, Dict[str, List[tuple]]] = defaultdict(lambda: defaultdict(list))
-        self.head_positions: Dict[str, Dict[str, List[tuple]]] = defaultdict(lambda: defaultdict(list))
-        self.heads_hit: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        self.current_player: Dict[str, str] = {}
-        self.placement_phase: Dict[str, bool] = {}
-        self.waiting_players: Set[WebSocket] = set()
-        self.shot_results: Dict[str, Dict[str, Dict[str, str]]] = defaultdict(lambda: defaultdict(dict))
-        self.active_games: Set[str] = set()
-        self.game_status: Dict[str, str] = {}  # 'waiting', 'in_progress', 'finished'
+        self.reset_all()
+
+    def reset_all(self):
+        """Reset all game state"""
+        self.games = {}
+        self.grids = {}
+        self.shots = defaultdict(lambda: defaultdict(list))
+        self.head_positions = defaultdict(lambda: defaultdict(list))
+        self.heads_hit = defaultdict(lambda: defaultdict(int))
+        self.current_player = {}
+        self.placement_phase = {}
+        self.waiting_players = set()
+        self.shot_results = defaultdict(lambda: defaultdict(dict))
+        self.active_games = set()
+        self.game_status = {}
 
     def cleanup_game(self, game_id: str):
         """Clean up all game-related data"""
         print(f"Cleaning up game {game_id}")
         if game_id in self.games:
-            del self.games[game_id]
+            self.games.pop(game_id, None)
         if game_id in self.grids:
-            del self.grids[game_id]
+            self.grids.pop(game_id, None)
         if game_id in self.shots:
-            del self.shots[game_id]
+            self.shots.pop(game_id, None)
         if game_id in self.head_positions:
-            del self.head_positions[game_id]
+            self.head_positions.pop(game_id, None)
         if game_id in self.heads_hit:
-            del self.heads_hit[game_id]
+            self.heads_hit.pop(game_id, None)
         if game_id in self.current_player:
-            del self.current_player[game_id]
+            self.current_player.pop(game_id, None)
         if game_id in self.placement_phase:
-            del self.placement_phase[game_id]
+            self.placement_phase.pop(game_id, None)
         if game_id in self.shot_results:
-            del self.shot_results[game_id]
+            self.shot_results.pop(game_id, None)
         if game_id in self.active_games:
             self.active_games.remove(game_id)
         if game_id in self.game_status:
-            del self.game_status[game_id]
+            self.game_status.pop(game_id, None)
 
     def create_new_game(self) -> str:
         """Create a new game with a unique ID"""
+        # Clean up any stale games first
+        for game_id in list(self.active_games):
+            if game_id not in self.games or not self.games[game_id]:
+                self.cleanup_game(game_id)
+
+        # Create new game ID
         game_id = "0"
         while game_id in self.active_games:
             game_id = str(int(game_id) + 1)
         
+        # Initialize game state
         self.games[game_id] = {}
         self.placement_phase[game_id] = True
         self.current_player[game_id] = "1"
         self.active_games.add(game_id)
         self.game_status[game_id] = 'waiting'
+        
         print(f"Created new game {game_id}")
         return game_id
 
@@ -82,9 +94,9 @@ async def find_game(websocket: WebSocket) -> str:
     if websocket in game_state.waiting_players:
         game_state.waiting_players.remove(websocket)
     
-    # Clean up any empty games
+    # Clean up any empty or stale games
     for game_id in list(game_state.active_games):
-        if game_id in game_state.games and not game_state.games[game_id]:
+        if game_id not in game_state.games or not game_state.games[game_id]:
             game_state.cleanup_game(game_id)
     
     # Look for available games
@@ -252,8 +264,11 @@ async def websocket_endpoint(websocket: WebSocket):
         if game_id and player_id and game_id in game_state.games:
             if player_id in game_state.games[game_id]:
                 del game_state.games[game_id][player_id]
+                
+                # Clean up the game completely
                 game_state.cleanup_game(game_id)
                 
+                # If there's a remaining player, notify them
                 remaining_players = list(game_state.games.get(game_id, {}).values())
                 for remaining_ws in remaining_players:
                     try:
@@ -262,7 +277,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "opponent_ready": False,
                             "your_turn": False,
                             "placement_phase": True,
-                            "message": "Opponent disconnected, please refresh to start a new game"
+                            "message": "Opponent disconnected. Please refresh to start a new game."
                         })
                     except:
                         pass
