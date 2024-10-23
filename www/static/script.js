@@ -35,7 +35,8 @@ document.head.appendChild(styleSheet);
 
 
 function initializeWebSocket() {
-    ws = new WebSocket(`ws://${window.location.host}/ws`);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     
     ws.onopen = () => {
         document.getElementById('status').textContent = 'Connected! Waiting for opponent...';
