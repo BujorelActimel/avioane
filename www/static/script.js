@@ -322,7 +322,8 @@ function handleServerMessage(data) {
 function showVictoryScreen(isWinner) {
     const overlay = document.getElementById('victoryOverlay');
     const title = document.getElementById('victoryTitle');
-    
+    const message = overlay.querySelector('.victory-message'); // Add this line if you don't have it
+
     // Calculate statistics
     const endTime = Date.now();
     const timePlayedSeconds = Math.floor((endTime - gameStats.startTime) / 1000);
@@ -344,6 +345,7 @@ function showVictoryScreen(isWinner) {
         createConfetti();
     } else {
         title.textContent = 'Defeat';
+        if (message) message.textContent = "You suck!";
         overlay.classList.add('defeat');
     }
 
