@@ -39,12 +39,24 @@ function initializeWebSocket() {
     ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     
     ws.onopen = () => {
+        console.log('WebSocket Connected');
         document.getElementById('status').textContent = 'Connected! Waiting for opponent...';
     };
     
     ws.onclose = () => {
+        console.log('WebSocket Disconnected');
         document.getElementById('status').textContent = 'Disconnected from server';
+        // Try to reconnect after 3 seconds
+        setTimeout(() => {
+            console.log('Attempting to reconnect...');
+            initializeWebSocket();
+        }, 3000);
     };
+    
+    ws.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+    };
+
     
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);

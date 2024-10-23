@@ -25,7 +25,7 @@ class GameState:
         self.heads_hit = defaultdict(lambda: defaultdict(int))
         self.current_player = {}
         self.placement_phase = {}
-        self.waiting_players = set()
+        self.waiting_players = []  # Changed from set() to list()
         self.shot_results = defaultdict(lambda: defaultdict(dict))
         self.active_games = set()
         self.game_status = {}
