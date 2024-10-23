@@ -1,4 +1,3 @@
-//static/script.js
 const WHITE = [255, 255, 255];
 let currentOrientation = 'up';
 let placementPhase = true;
@@ -17,7 +16,6 @@ let gameStats = {
     totalShots: 0,
     hits: 0
 };
-
 
 function initializeWebSocket() {
     ws = new WebSocket(`ws://${window.location.host}/ws`);
@@ -105,7 +103,6 @@ function handleOpponentGridClick(row, col) {
     document.getElementById('status').textContent = "Opponent's turn...";
 }
 
-
 function handleFlag(row, col) {
     if (placementPhase || myShots[row][col]) return;
     flags[row][col] = !flags[row][col];
@@ -134,7 +131,6 @@ function updateShotDisplay() {
         }
     }
 }
-
 
 function getShotResult(shot) {
     const [row, col] = shot;
@@ -207,9 +203,6 @@ function updateOpponentShots(opponentShots) {
     });
 }
 
-
-// Update the handleServerMessage function in script.js
-
 function handleServerMessage(data) {
     if (data.type === 'init') {
         document.getElementById('status').textContent = 'Waiting for opponent...';
@@ -266,7 +259,6 @@ function handleServerMessage(data) {
 function showVictoryScreen(isWinner) {
     const overlay = document.getElementById('victoryOverlay');
     const title = document.getElementById('victoryTitle');
-    const message = document.getElementById('victoryMessage');
     
     // Calculate statistics
     const endTime = Date.now();
@@ -280,21 +272,31 @@ function showVictoryScreen(isWinner) {
     // Update statistics display
     document.getElementById('totalShots').textContent = gameStats.totalShots;
     document.getElementById('hitRatio').textContent = `${hitRatio}%`;
-    document.getElementById('timePlayed').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('timePlayed').textContent = 
+        `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
     if (isWinner) {
         title.textContent = 'Victory!';
-        message.textContent = 'You\'ve defeated your opponent!';
         overlay.classList.remove('defeat');
         createConfetti();
     } else {
         title.textContent = 'Defeat';
-        message.textContent = 'Better luck next time!';
         overlay.classList.add('defeat');
     }
 
     // Show the overlay
     overlay.classList.add('active');
+    
+    // Set up victory screen buttons
+    const playAgainBtn = overlay.querySelector('.play-again');
+    const exitBtn = overlay.querySelector('.exit-game');
+    
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', restartGame, { once: true });
+    }
+    if (exitBtn) {
+        exitBtn.addEventListener('click', exitGame, { once: true });
+    }
 }
 
 function createConfetti() {
@@ -316,50 +318,49 @@ function createConfetti() {
 
 function disconnectWebSocket() {
     if (ws) {
+        // Remove all WebSocket event listeners
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        
+        // Close the connection
         ws.close();
         ws = null;
     }
 }
 
-function restartGame() {
-    // Disconnect current WebSocket
-    disconnectWebSocket();
+function removeAllEventListeners() {
+    const myGrid = document.getElementById('my-grid');
+    const opponentGrid = document.getElementById('opponent-grid');
     
-    // Reset all game state variables
-    currentOrientation = 'up';
-    placementPhase = true;
-    myTurn = false;
-    planesPlaced = 0;
-    myGrid = Array(10).fill().map(() => Array(10).fill().map(() => WHITE));
-    myShots = Array(10).fill().map(() => Array(10).fill(false));
-    flags = Array(10).fill().map(() => Array(10).fill(false));
-    headPositions = [];
-    opponentShots = new Set();
-    shotResults = {};
+    // Clone and replace grids to remove all event listeners
+    const newMyGrid = myGrid.cloneNode(true);
+    const newOpponentGrid = opponentGrid.cloneNode(true);
+    myGrid.parentNode.replaceChild(newMyGrid, myGrid);
+    opponentGrid.parentNode.replaceChild(newOpponentGrid, opponentGrid);
     
-    // Reset game statistics
-    gameStats = {
-        startTime: Date.now(),
-        totalShots: 0,
-        hits: 0
-    };
-    
-    // Hide victory overlay
-    document.getElementById('victoryOverlay').classList.remove('active');
-    
-    // Clear all confetti
-    document.querySelectorAll('.confetti').forEach(el => el.remove());
-    
-    // Reset UI
-    document.getElementById('status').textContent = 'Connecting to server...';
-    document.getElementById('score').textContent = 'Heads Hit - You: 0 Opponent: 0';
-    
-    // Clear grids
-    createGrid('my-grid');
-    createGrid('opponent-grid', true);
-    
-    // Initialize new WebSocket connection
-    initializeWebSocket();
+    // Remove rotation control listeners
+    ['rotate-up', 'rotate-right', 'rotate-down', 'rotate-left'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            const newElement = element.cloneNode(true);
+            element.parentNode.replaceChild(newElement, element);
+        }
+    });
+}
+
+function setupRotationControls() {
+    ['up', 'right', 'down', 'left'].forEach(direction => {
+        const element = document.getElementById(`rotate-${direction}`);
+        if (element) {
+            const newElement = element.cloneNode(true);
+            element.parentNode.replaceChild(newElement, element);
+            newElement.addEventListener('click', () => {
+                currentOrientation = direction;
+            });
+        }
+    });
 }
 
 function exitGame() {
@@ -369,30 +370,14 @@ function exitGame() {
     document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Thanks for playing!</h1><p>You can close this window now.</p></div>';
 }
 
-// Initialize game
-createGrid('my-grid');
-createGrid('opponent-grid', true);
-initializeWebSocket();
-
-window.addEventListener('beforeunload', () => {
-    disconnectWebSocket();
-});
-
-// Set up rotation controls
-document.getElementById('rotate-up').addEventListener('click', () => {
-    currentOrientation = 'up';
-});
-document.getElementById('rotate-right').addEventListener('click', () => {
-    currentOrientation = 'right';
-});
-document.getElementById('rotate-down').addEventListener('click', () => {
-    currentOrientation = 'down';
-});
-document.getElementById('rotate-left').addEventListener('click', () => {
-    currentOrientation = 'left';
-});
-
-document.addEventListener('DOMContentLoaded', () => {
+// Main initialization function
+function initializeGame() {
+    createGrid('my-grid');
+    createGrid('opponent-grid', true);
+    setupRotationControls();
+    initializeWebSocket();
+    
+    // Add mouseover effects for opponent grid
     const opponentGrid = document.getElementById('opponent-grid');
     opponentGrid.addEventListener('mouseover', (e) => {
         const cell = e.target;
@@ -404,4 +389,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+}
+
+function restartGame() {
+    // Disconnect current WebSocket
+    disconnectWebSocket();
+    removeAllEventListeners();
+
+    // Reset all game state variables
+    currentOrientation = 'up';
+    placementPhase = true;
+    myTurn = false;
+    planesPlaced = 0;
+    myGrid = Array(10).fill().map(() => Array(10).fill().map(() => WHITE));
+    myShots = Array(10).fill().map(() => Array(10).fill(false));
+    flags = Array(10).fill().map(() => Array(10).fill(false));
+    headPositions = [];
+    opponentShots = new Set();
+    shotResults = {};
+
+    // Reset game statistics
+    gameStats = {
+        startTime: Date.now(),
+        totalShots: 0,
+        hits: 0
+    };
+
+    // Hide victory overlay and remove all confetti
+    const victoryOverlay = document.getElementById('victoryOverlay');
+    victoryOverlay.classList.remove('active');
+    victoryOverlay.querySelectorAll('.confetti').forEach(el => el.remove());
+
+    // Reset UI elements
+    document.getElementById('status').textContent = 'Connecting to server...';
+    document.getElementById('score').textContent = 'Heads Hit - You: 0 Opponent: 0';
+
+    // Use the same initialization as the initial game setup
+    initializeGame();
+}
+
+// Single initialization point
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGame);
+} else {
+    initializeGame();
+}
+
+// Add window unload handler
+window.addEventListener('beforeunload', () => {
+    disconnectWebSocket();
 });
