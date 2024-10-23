@@ -16,6 +16,23 @@ let gameStats = {
     totalShots: 0,
     hits: 0
 };
+const previewStyles = `
+.preview-cell {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(144, 238, 144, 0.5);  /* Light green */
+    transition: all 0.2s ease;
+}
+
+.invalid-preview-cell {
+    background-color: rgba(255, 99, 71, 0.5);  /* Light red */
+}
+`;
+const styleSheet = document.createElement("style");
+styleSheet.textContent = previewStyles;
+document.head.appendChild(styleSheet);
+
 
 function initializeWebSocket() {
     ws = new WebSocket(`ws://${window.location.host}/ws`);
@@ -32,6 +49,35 @@ function initializeWebSocket() {
         const data = JSON.parse(event.data);
         handleServerMessage(data);
     };
+}
+
+function showAirplanePreview(row, col) {
+    if (!placementPhase || planesPlaced >= maxAirplanes) return;
+    
+    // Clear any existing preview
+    clearAirplanePreview();
+    
+    const airplane = createAirplane(col, row, currentOrientation);
+    const isValid = canPlaceAirplane(airplane);
+    
+    const myGridElement = document.getElementById('my-grid');
+    
+    airplane.forEach(([previewRow, previewCol]) => {
+        if (previewRow >= 0 && previewRow < 10 && previewCol >= 0 && previewCol < 10) {
+            const cell = myGridElement.children[previewRow * 10 + previewCol];
+            const preview = document.createElement('div');
+            preview.className = 'preview-cell';
+            if (!isValid) {
+                preview.classList.add('invalid-preview-cell');
+            }
+            cell.appendChild(preview);
+        }
+    });
+}
+
+function clearAirplanePreview() {
+    const previewCells = document.querySelectorAll('.preview-cell');
+    previewCells.forEach(cell => cell.remove());
 }
 
 function createGrid(elementId, isOpponentGrid = false) {
@@ -53,6 +99,9 @@ function createGrid(elementId, isOpponentGrid = false) {
                 });
             } else {
                 cell.addEventListener('click', () => handleMyGridClick(row, col));
+                // Add hover events for airplane placement
+                cell.addEventListener('mouseenter', () => showAirplanePreview(row, col));
+                cell.addEventListener('mouseleave', clearAirplanePreview);
             }
             
             grid.appendChild(cell);
@@ -82,6 +131,7 @@ function handleMyGridClick(row, col) {
         updateGridDisplay();
         sendGameState();
     }
+    clearAirplanePreview();
 }
 
 function handleOpponentGridClick(row, col) {
@@ -334,6 +384,9 @@ function removeAllEventListeners() {
     const myGrid = document.getElementById('my-grid');
     const opponentGrid = document.getElementById('opponent-grid');
     
+    // Clear any existing preview before removing listeners
+    clearAirplanePreview();
+    
     // Clone and replace grids to remove all event listeners
     const newMyGrid = myGrid.cloneNode(true);
     const newOpponentGrid = opponentGrid.cloneNode(true);
@@ -358,6 +411,14 @@ function setupRotationControls() {
             element.parentNode.replaceChild(newElement, element);
             newElement.addEventListener('click', () => {
                 currentOrientation = direction;
+                // Update preview if mouse is over grid
+                const hoveredCell = document.querySelector('.preview-cell')?.parentElement;
+                if (hoveredCell) {
+                    const row = parseInt(hoveredCell.dataset.row);
+                    const col = parseInt(hoveredCell.dataset.col);
+                    clearAirplanePreview();
+                    showAirplanePreview(row, col);
+                }
             });
         }
     });
